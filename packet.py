@@ -73,7 +73,7 @@ class UrfaPacket(object):
     def DataSetInt(self, param):
         """Function OK"""
         param = int(param)
-        self.senddata.append(pack('>L', param))
+        self.senddata.append(pack('>l', param))
         self.len += 8
 
     def DataSetLong(self, param):
@@ -98,7 +98,7 @@ class UrfaPacket(object):
         self.len += 8
 
     def AttrSetInt(self, attr, code):
-        self.sendattr.append({ 'code' : code, 'data' : pack('>L',attr), 'len' : 8 })
+        self.sendattr.append({ 'code' : code, 'data' : pack('>i',attr), 'len' : 8 })
         self.len += 8
 
     def AttrSetString(self, s, code):

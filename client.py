@@ -1,17 +1,19 @@
 import hashlib
 import socket
 import ssl
+import os
 from packet import UrfaPacket
 
 
 class UrfaClient(object):
 
-    def __init__(self, user='init', password='init',host='127.0.0.1', port='11758', ssl=False, debug=False):
+    def __init__(self, user='init', password='init',host='127.0.0.1', port='11758', ssl=False, debug=False, admin=True):
         self.user = user
         self.password = password
         self.host = host
         self.port = int(port)
         self.debug = debug
+        self.admin = admin
         self.ssl = ssl
         self.socket = None
 
@@ -62,9 +64,16 @@ class UrfaClient(object):
                     if self.debug:
                         print('Sever ssl True')
                     ctx = ssl.SSLContext()
-                    ctx.set_ciphers('ALL:@SECLEVEL=0')
-                    ctx.verify_mode=ssl.CERT_NONE
-                    ctx.load_cert_chain(certfile='admin.crt',password='netup')
+                    ctx.verify_mode = ssl.CERT_NONE
+                    ctx.load_cert_chain(certfile=os.path.dirname(os.path.realpath(__file__))+'/admin.crt',password='netup')
+                    try:
+                        if self.debug:
+                            print('Try all ciphers')
+                        ctx.set_ciphers('ALL:@SECLEVEL=0')
+                    except Exception as e:
+                        if self.debug:
+                            print('Try selected ciphers')
+                        ctx.set_ciphers('DHE-RSA-AES256-SHA:DHE-DSS-AES256-SHA:AES256-SHA:EDH-RSA-DES-CBC3-SHA:EDH-DSS-DES-CBC3-SHA:DES-CBC3-SHA:DES-CBC3-MD5:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA:AES128-SHA:IDEA-CBC-SHA:IDEA-CBC-MD5:RC2-CBC-MD5:RC4-SHA:RC4-MD5:RC4-MD5:EDH-RSA-DES-CBC-SHA:EDH-DSS-DES-CBC-SHA:DES-CBC-SHA:DES-CBC-MD5:EXP-EDH-RSA-DES-CBC-SHA:EXP-EDH-DSS-DES-CBC-SHA:EXP-DES-CBC-SHA:EXP-RC2-CBC-MD5:EXP-RC2-CBC-MD5:EXP-RC4-MD5:EXP-RC4-MD5')
                     ssl_socket = ctx.wrap_socket(self.socket)
                     self.socket = ssl_socket
                 if self.debug:
@@ -87,7 +96,10 @@ class UrfaClient(object):
         packet.AttrSetString(self.user, 2)
         packet.AttrSetString(digest, 8)
         packet.AttrSetString(m.digest(), 9)
-        packet.AttrSetInt(4, 10)
+        if self.admin:
+            packet.AttrSetInt(4, 10)
+        else:
+            packet.AttrSetInt(2, 10)
         packet.AttrSetInt(2, 1)
         packet.write()
 

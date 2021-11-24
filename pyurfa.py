@@ -7,13 +7,17 @@ from packet import UrfaPacket
 class Urfa:
     def __init__(self, conf):
         if 'xml' in conf.keys():
-           if not os.path.exists(conf['xml']):
+           if os.path.exists(conf['xml']):
+               conf['xml']=conf['xml']
+           elif os.path.exists(os.path.dirname(os.path.realpath(__file__))+'/'+conf['xml']):
+               conf['xml']=os.path.dirname(os.path.realpath(__file__))+'/'+conf['xml']
+           else:
                 raise Exception("No XML file found")
         else:
-            if not os.path.exists('xml/api_53-001.xml'):
+            if not os.path.exists(os.path.dirname(os.path.realpath(__file__))+'/xml/api_53-001.xml'):
                 raise Exception("No XML file found")
             else:
-                conf['xml']='xml/api_53-001.xml'
+                conf['xml']=os.path.dirname(os.path.realpath(__file__))+'/xml/api_53-001.xml'
         if 'user' in conf.keys():
             self.user = conf['user']
         else:
@@ -34,7 +38,10 @@ class Urfa:
             self.debug = bool(conf['debug'])
         else:
             self.debug = False
-        self.urfa_connect=UrfaClient(self.user,self.password,self.host,self.port,self.debug)
+        self.admin=True
+        if 'admin' in conf.keys():
+            self.admin = conf['admin']
+        self.urfa_connect=UrfaClient(user=self.user,password=self.password,host=self.host,port=self.port,debug=self.debug,admin=self.admin)
         self.urfa_connect.login()
         self.tree = ET.parse(conf['xml'])
         self.iter_ = self.tree.iter()
@@ -74,9 +81,22 @@ class Urfa:
                     else:
                         self.dataForRet[el.attrib['name']] = self.packet.DataGetInt()
                 elif el.attrib['name'] in dataCheck.keys():
-                    self.dataForSend[el.attrib['name']]=int(dataCheck[el.attrib['name']])
+                    if 'list' in str(type(dataCheck[el.attrib['name']])):
+                        self.dataForSend[el.attrib['name']] = dataCheck[el.attrib['name']]
+                    else:
+                        if type(dataCheck[el.attrib['name']]) is dict:
+                            self.dataForSend[el.attrib['name']] = len(dataCheck[el.attrib['name']])
+                        else:
+                            self.dataForSend[el.attrib['name']]=int(dataCheck[el.attrib['name']])
                     if self.send:
-                        self.packet.DataSetInt(self.dataForSend[el.attrib['name']])
+                        if not 'list' in str(type(self.dataForSend[el.attrib['name']])) and not 'bool' in str(type(self.packet)):
+                            if self.debug:
+                                self.debugPrint('Send '+el.attrib['name']+' val '+str(self.dataForSend[el.attrib['name']]))
+                            self.packet.DataSetInt(self.dataForSend[el.attrib['name']])
+                        elif 'list' in str(type(self.dataForSend[el.attrib['name']])):
+                            if self.debug:
+                                self.debugPrint('Send ' + el.attrib['name'] + ' val ' + str(len(self.dataForSend[el.attrib['name']])))
+                            self.packet.DataSetInt(len(self.dataForSend[el.attrib['name']]))
                 elif 'default' in el.keys():
                     self.dataForSend[el.attrib['name']] = int(self.retdef(el.attrib['default']))
                     if self.send:
@@ -160,10 +180,11 @@ class Urfa:
                     if self.tempKey:
                         if src and src in self.dataForRet[dataCheck['key']][dataCheck['el']].keys():
                             value = self.dataForRet[dataCheck['key']][dataCheck['el']][src]
+                            self.dataForRet[dataCheck['key']][dataCheck['el']][dst] = value
                     else:
                         if src and src in self.dataForRet.keys():
                             value = self.dataForRet[src]
-                    self.dataForRet[dst] = value
+                            self.dataForRet[dst] = value
                 else:
                     if src and src in self.dataForSend.keys():
                         value = self.dataForSend[src]
