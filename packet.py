@@ -124,7 +124,7 @@ class UrfaPacket(object):
     def DataGetLong(self):
         num = self.iterator
         self.iterator += 1
-        return unpack(">L", self.data[num])[0]
+        return unpack(">Q", self.data[num])[0]
 
     def DataGetDouble(self):
         num = self.iterator
